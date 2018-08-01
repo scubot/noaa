@@ -160,12 +160,12 @@ class NOAA(BotModule):
         if len(msg) > 1:
             if msg[1] == 'tide':
                 station_id = 0
-                coords_match = re.match('^(-?[\d]+.[\d]+),? (-?[\d]+.[\d]+)$', msg[2])
+                coords_match = re.match('^(-?[\d]+\.[\d]+)(,? |, ?)(-?[\d]+\.[\d]+)$', msg[2])
                 if re.match('^[\d]+$', msg[2]):
                     station_id = msg[2]
                 elif coords_match:
                     station_id = station_globe.closest_station_coords(float(coords_match.group(1)),
-                                                                      float(coords_match.group(2))).id_
+                                                                      float(coords_match.group(3))).id_
                 else:
                     station_id = station_globe.closest_station_name(msg[2]).id_
                 
