@@ -114,7 +114,7 @@ class NOAA(BotModule):
 
     trigger_string = 'noaa'
 
-    module_version = '0.1.0'
+    module_version = '0.2.0'
 
     listen_for_reaction = True
 
