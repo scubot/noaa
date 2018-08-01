@@ -23,19 +23,22 @@ class Station(object):
 
         
 class StationGlobe(object):
+    db_query = Query()
+
     def __init__(self, stations, geolocator):
         self.stations = stations  # iterable collection of `Station` objects
         self.geolocator = geolocator  # geopy geolocator
         
     @staticmethod
-    def scrape_noaa(geolocator):
+    def scrape_noaa(self, geolocator):
         noaa = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
-            geo = geolocator.geocode(match[1])
-            station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
-            stations.append(station_object)
-            NOAA.module_db.insert(station_object)
+            if NOAA.module_db.search(self.db_query.station.id_ == match[0]) is None:
+                geo = geolocator.geocode(match[1])
+                station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
+                stations.append(station_object)
+                NOAA.module_db.insert({'station': station_object})
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
