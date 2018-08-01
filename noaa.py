@@ -173,10 +173,10 @@ class NOAA(BotModule):
                 if re.match('^[\d]+$', msg[2]):
                     station_id = msg[2]
                 elif coords_match:
-                    station_id = station_globe.closest_station_coords(float(coords_match.group(1)),
-                                                                      float(coords_match.group(3))).id_
+                    station_id = self.station_globe.closest_station_coords(float(coords_match.group(1)),
+                                                                           float(coords_match.group(3))).id_
                 else:
-                    station_id = station_globe.closest_station_name(msg[2]).id_
+                    station_id = self.station_globe.closest_station_name(msg[2]).id_
                 
                 m_ret = await client.send_message(message.channel, embed=await self.fetching_placeholder())
                 self.scroll.title = "Tidal information for station #" + station_id
@@ -219,4 +219,4 @@ class NOAA(BotModule):
             embed = self.scroll.previous(current_pos=pos)
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
-                                   
+
