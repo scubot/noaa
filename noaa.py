@@ -34,11 +34,15 @@ class StationGlobe(object):
         noaa = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
-            if NOAA.module_db.search(self.db_query.station.id_ == match[0]) is None:
+            search = NOAA.module_db.search(self.db_query.station.id_ == match[0])
+            if search is None:
                 geo = geolocator.geocode(match[1])
                 station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
                 stations.append(station_object)
                 NOAA.module_db.insert({'station': station_object})
+            else:
+                stations.append(search)
+
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
