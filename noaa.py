@@ -33,7 +33,9 @@ class StationGlobe(object):
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
             geo = geolocator.geocode(match[1])
-            stations.append(Station(geo.latitude, geo.longitude, match[1], match[0]))
+            station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
+            stations.append(station_object)
+            NOAA.module_db.insert(station_object)
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
