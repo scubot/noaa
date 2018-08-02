@@ -23,7 +23,6 @@ class Station(object):
 
         
 class StationGlobe(object):
-    db_query = Query()
 
     def __init__(self, stations, geolocator):
         self.stations = stations  # iterable collection of `Station` objects
@@ -31,10 +30,11 @@ class StationGlobe(object):
         
     @staticmethod
     def scrape_noaa(geolocator):
+        db_query = Query()
         noaa = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
-            search = NOAA.module_db.search(self.db_query.station.id_ == match[0])
+            search = NOAA.module_db.search(db_query.station.id_ == match[0])
             if search is None:
                 geo = geolocator.geocode(match[1])
                 station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
