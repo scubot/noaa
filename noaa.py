@@ -55,12 +55,12 @@ class StationGlobe(object):
                 
                 # Get station latitude
                 latitude_match = re.search(LATITUDE_PATTERN, station_info.text)
-                latitude = (-1 if latitude_match.group(3) == 'W' else 1) \
+                latitude = (-1 if latitude_match.group(3) == 'S' else 1) \
                          * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
                 
                 # Get station longitude
                 longitude_match = re.search(LONGITUDE_PATTERN, station_info.text)
-                longitude = (-1 if latitude_match.group(3) == 'S' else 1) \
+                longitude = (-1 if latitude_match.group(3) == 'W' else 1) \
                           * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
                 
                 station_object = Station(latitude, longitude, stat_name, stat_id)
@@ -83,7 +83,7 @@ class StationGlobe(object):
     
     def closest_station_name(self, location):
         """Accepts a text location and returns the closest station in the globe."""
-        geo = geolocator.geocode(location)
+        geo = self.geolocator.geocode(location)
         return self.closest_station_coords(geo.latitude, geo.longitude)
                         
 
