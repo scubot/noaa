@@ -23,17 +23,26 @@ class Station(object):
 
         
 class StationGlobe(object):
+
     def __init__(self, stations, geolocator):
         self.stations = stations  # iterable collection of `Station` objects
         self.geolocator = geolocator  # geopy geolocator
         
     @staticmethod
     def scrape_noaa(geolocator):
+        db_query = Query()
         noaa = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
-            geo = geolocator.geocode(match[1])
-            stations.append(Station(geo.latitude, geo.longitude, match[1], match[0]))
+            search = NOAA.module_db.search(db_query.station.id_ == match[0])
+            if search is None:
+                geo = geolocator.geocode(match[1])
+                station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
+                stations.append(station_object)
+                NOAA.module_db.insert({'station': station_object})
+            else:
+                stations.append(search)
+
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
@@ -164,10 +173,10 @@ class NOAA(BotModule):
                 if re.match('^[\d]+$', msg[2]):
                     station_id = msg[2]
                 elif coords_match:
-                    station_id = station_globe.closest_station_coords(float(coords_match.group(1)),
-                                                                      float(coords_match.group(3))).id_
+                    station_id = self.station_globe.closest_station_coords(float(coords_match.group(1)),
+                                                                           float(coords_match.group(3))).id_
                 else:
-                    station_id = station_globe.closest_station_name(msg[2]).id_
+                    station_id = self.station_globe.closest_station_name(msg[2]).id_
                 
                 m_ret = await client.send_message(message.channel, embed=await self.fetching_placeholder())
                 self.scroll.title = "Tidal information for station #" + station_id
@@ -210,4 +219,4 @@ class NOAA(BotModule):
             embed = self.scroll.previous(current_pos=pos)
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
-                                   
+
