@@ -49,8 +49,6 @@ class StationGlobe(object):
             stat_id = match[1]
             stat_name = html.unescape(match[2])
 
-            print("Looking for '{}' station.".format(stat_name))
-
             search = database.search(db_query.station.id_ == stat_id)
             if not search:
                 station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
@@ -69,8 +67,6 @@ class StationGlobe(object):
                 stations.append(station_object)
                 database.insert({'station': station_object.to_dict()})
             else:
-                print("Cache hit:")
-                print(search)
                 stations.append(Station.from_dict(search[0]['station']))
         return StationGlobe(stations, geolocator)
     
