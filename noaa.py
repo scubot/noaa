@@ -55,13 +55,17 @@ class StationGlobe(object):
                 
                 # Get station latitude
                 latitude_match = re.search(LATITUDE_PATTERN, station_info.text)
-                latitude = (-1 if latitude_match.group(3) == 'S' else 1) \
-                         * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+                latitude = _dms_to_dd(float(latitude_match.group(1)),
+                                      float(latitude_match.group(2)),
+                                       0,
+                                       latitude_match.group(3))
                 
                 # Get station longitude
                 longitude_match = re.search(LONGITUDE_PATTERN, station_info.text)
-                longitude = (-1 if latitude_match.group(3) == 'W' else 1) \
-                          * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+                longitude = _dms_to_dd(float(longitude_match.group(1)),
+                                       float(longitude_match.group(2)),
+                                       0,
+                                       longitude_match.group(3))
                 
                 station_object = Station(latitude, longitude, stat_name, stat_id)
                 stations.append(station_object)
@@ -79,7 +83,7 @@ class StationGlobe(object):
             if distance < min_distance:
                 min_distance = distance
                 closest_station = station
-        return station
+        return closest_station
     
     def closest_station_name(self, location):
         """Accepts a text location and returns the closest station in the globe."""
@@ -251,3 +255,14 @@ class NOAA(BotModule):
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
 
+def _dms_to_dd(degrees, minutes, seconds, direction):
+    """Helper function converting Degrees/Minutes/Seconds to Decimal Degrees
+    
+    Degrees, minutes, and seconds are numeric types.
+    Direction is a single character: 'N', 'E', 'S', or 'W'.
+    The type returned shall be a floating point number.
+    """
+    if direction == 'N' or direction == 'E':
+        return degrees + (minutes / 60.) + (seconds / 3600.)
+    else:
+        return -1 * (degrees + (minutes / 60.) + (seconds / 3600.))
