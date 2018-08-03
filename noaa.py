@@ -1,12 +1,16 @@
 import re
 import html
-
-from tinydb import TinyDB, Query
 import datetime
 import asyncio
-import requests
 
+import requests
+import discord
+from tinydb import TinyDB, Query
 from geopy import geocoders
+import shlex
+
+from modules.botModule import *
+import modules.reactionscroll as rs
 
 STATION_LIST_URL = "https://tidesandcurrents.noaa.gov/stations.html?type=All%20Stations&sort=0"
 STATION_INFO_URL_FORMAT = "https://tidesandcurrents.noaa.gov/stationhome.html?id={}"
@@ -159,8 +163,6 @@ class NOAA(BotModule):
     message_returns = []
 
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
-    
-    station_globe = 
     
     def __init__(self):
         super().__init__()
