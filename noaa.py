@@ -1,13 +1,10 @@
 import re
+import html
 
-import discord
-from modules.botModule import *
-import shlex
 from tinydb import TinyDB, Query
 import datetime
 import asyncio
 import requests
-import modules.reactionscroll as rs
 
 from geopy import geocoders
 
@@ -25,6 +22,18 @@ class Station(object):
         self.name = name  # Human-readable name of the location (e.g., city, state)
         self.id_ = id_  # NOAA identification number of the station
 
+    def to_dict(self):
+        return {
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'name': self.name,
+            'id_': self.id_
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return Station(data['latitude'], data['longitude'], data['name'], data['id_'])
+
         
 class StationGlobe(object):
 
@@ -37,11 +46,13 @@ class StationGlobe(object):
         station_page = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
-            search = database.search(db_query.station.id_ == match[0])
-            if search is None:
-                stat_id = match[1]
-                stat_name = match[2]
-                
+            stat_id = match[1]
+            stat_name = html.unescape(match[2])
+
+            print("Looking for '{}' station.".format(stat_name))
+
+            search = database.search(db_query.station.id_ == stat_id)
+            if not search:
                 station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
                 
                 # Get station latitude
@@ -56,9 +67,11 @@ class StationGlobe(object):
                 
                 station_object = Station(latitude, longitude, stat_name, stat_id)
                 stations.append(station_object)
-                database.insert({'station': station_object})
+                database.insert({'station': station_object.to_dict()})
             else:
-                stations.append(search)
+                print("Cache hit:")
+                print(search)
+                stations.append(Station.from_dict(search[0]['station']))
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
@@ -76,7 +89,7 @@ class StationGlobe(object):
         """Accepts a text location and returns the closest station in the globe."""
         geo = geolocator.geocode(location)
         return self.closest_station_coords(geo.latitude, geo.longitude)
-            
+                        
 
 class NOAAScrollable(rs.Scrollable):
     def preprocess(self, data):  # Ok this actually does nothing
