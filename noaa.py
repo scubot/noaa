@@ -33,7 +33,7 @@ class StationGlobe(object):
         self.geolocator = geolocator  # geopy geolocator
         
     @staticmethod
-    def scrape_noaa(geolocator, database, query):
+    def scrape_noaa(geolocator, database, db_query):
         station_page = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
