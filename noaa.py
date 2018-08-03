@@ -33,11 +33,11 @@ class StationGlobe(object):
         self.geolocator = geolocator  # geopy geolocator
         
     @staticmethod
-    def scrape_noaa(geolocator, db_query):
+    def scrape_noaa(geolocator, database, query):
         station_page = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
-            search = NOAA.module_db.search(db_query.station.id_ == match[0])
+            search = database.search(db_query.station.id_ == match[0])
             if search is None:
                 stat_id = match[1]
                 stat_name = match[2]
@@ -56,7 +56,7 @@ class StationGlobe(object):
                 
                 station_object = Station(latitude, longitude, stat_name, stat_id)
                 stations.append(station_object)
-                NOAA.module_db.insert({'station': station_object})
+                database.insert({'station': station_object})
             else:
                 stations.append(search)
         return StationGlobe(stations, geolocator)
