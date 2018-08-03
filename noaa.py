@@ -1,11 +1,95 @@
-import discord
-from modules.botModule import *
-import shlex
+import re
+import html
+
 from tinydb import TinyDB, Query
 import datetime
 import asyncio
 import requests
-import modules.reactionscroll as rs
+
+from geopy import geocoders
+
+STATION_LIST_URL = "https://tidesandcurrents.noaa.gov/stations.html?type=All%20Stations&sort=0"
+STATION_INFO_URL_FORMAT = "https://tidesandcurrents.noaa.gov/stationhome.html?id={}"
+
+STATION_LISTING_PATTERN = '\\<a\\ style\\=\\"color\\:\\ \\#015FA9\\;\\"\\ href\\=\\"inventory\\.html\\?id\\=([\\d]+)\\"\\>[\\d]+\\ ([^\\<]+)\\<\\/a\\>'
+LATITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (N|S)'
+LONGITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (E|W)'
+
+class Station(object):
+    def __init__(self, latitude, longitude, name, id_):
+        self.latitude = latitude  # Latitude in decimal form
+        self.longitude = longitude  # Longitude in decimal form
+        self.name = name  # Human-readable name of the location (e.g., city, state)
+        self.id_ = id_  # NOAA identification number of the station
+
+    def to_dict(self):
+        return {
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'name': self.name,
+            'id_': self.id_
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return Station(data['latitude'], data['longitude'], data['name'], data['id_'])
+
+        
+class StationGlobe(object):
+
+    def __init__(self, stations, geolocator):
+        self.stations = stations  # iterable collection of `Station` objects
+        self.geolocator = geolocator  # geopy geolocator
+        
+    @staticmethod
+    def scrape_noaa(geolocator, database, db_query):
+        station_page = requests.get(STATION_LIST_URL)
+        stations = []
+        for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
+            stat_id = match[1]
+            stat_name = html.unescape(match[2])
+
+            search = database.search(db_query.station.id_ == stat_id)
+            if not search:
+                station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
+                
+                # Get station latitude
+                latitude_match = re.search(LATITUDE_PATTERN, station_info.text)
+                latitude = _dms_to_dd(float(latitude_match.group(1)),
+                                      float(latitude_match.group(2)),
+                                       0,
+                                       latitude_match.group(3))
+                
+                # Get station longitude
+                longitude_match = re.search(LONGITUDE_PATTERN, station_info.text)
+                longitude = _dms_to_dd(float(longitude_match.group(1)),
+                                       float(longitude_match.group(2)),
+                                       0,
+                                       longitude_match.group(3))
+                
+                station_object = Station(latitude, longitude, stat_name, stat_id)
+                stations.append(station_object)
+                database.insert({'station': station_object.to_dict()})
+            else:
+                stations.append(Station.from_dict(search[0]['station']))
+        return StationGlobe(stations, geolocator)
+    
+    def closest_station_coords(self, latitude, longitude):
+        """Accepts a latitude and longitude and returns the closest station in the globe."""
+        min_distance = float('inf')
+        closest_station = None
+        for station in self.stations:
+            distance = (latitude - station.latitude)**2 + (longitude - station.longitude)**2
+            if distance < min_distance:
+                min_distance = distance
+                closest_station = station
+        return closest_station
+    
+    def closest_station_name(self, location):
+        """Accepts a text location and returns the closest station in the globe."""
+        geo = self.geolocator.geocode(location)
+        return self.closest_station_coords(geo.latitude, geo.longitude)
+                        
 
 class NOAAScrollable(rs.Scrollable):
     def preprocess(self, data):  # Ok this actually does nothing
@@ -68,13 +152,21 @@ class NOAA(BotModule):
 
     trigger_string = 'noaa'
 
-    module_version = '0.1.0'
+    module_version = '0.2.0'
 
     listen_for_reaction = True
 
     message_returns = []
 
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
+    
+    station_globe = 
+    
+    def __init__(self):
+        super().__init__()
+        self.station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'),
+                                                      self.module_db,
+                                                      Query())
 
     async def contains_returns(self, message):
         for x in self.message_returns:
@@ -111,8 +203,18 @@ class NOAA(BotModule):
         target = Query()
         if len(msg) > 1:
             if msg[1] == 'tide':
+                station_id = 0
+                coords_match = re.match('^(-?[\d]+\.[\d]+)(,? |, ?)(-?[\d]+\.[\d]+)$', msg[2])
+                if re.match('^[\d]+$', msg[2]):
+                    station_id = msg[2]
+                elif coords_match:
+                    station_id = self.station_globe.closest_station_coords(float(coords_match.group(1)),
+                                                                           float(coords_match.group(3))).id_
+                else:
+                    station_id = self.station_globe.closest_station_name(msg[2]).id_
+                
                 m_ret = await client.send_message(message.channel, embed=await self.fetching_placeholder())
-                self.scroll.title = "Tidal information for station #" + msg[2]
+                self.scroll.title = "Tidal information for station #" + station_id
                 days_advance = datetime.timedelta(days=self.days_advance)
                 today = datetime.date.today()
                 end_date = today + days_advance
@@ -120,7 +222,7 @@ class NOAA(BotModule):
                 end_date = end_date.isoformat().replace('-', '')
                 url = "https://tidesandcurrents.noaa.gov/api/datagetter?product=predictions" \
                       "&application=NOS.COOPS.TAC.WL&begin_date=" + today + "&end_date=" + end_date + "&datum=MLLW" \
-                      "&station=" + msg[2] + "&time_zone=lst_ldt&units=english&interval=hilo&format=json"
+                      "&station=" + station_id + "&time_zone=lst_ldt&units=english&interval=hilo&format=json"
                 html = requests.get(url)
                 if await self.api_error(html):
                     await client.edit_message(m_ret, embed=discord.Embed(title='That station does not exist or'
@@ -152,3 +254,15 @@ class NOAA(BotModule):
             embed = self.scroll.previous(current_pos=pos)
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
+
+def _dms_to_dd(degrees, minutes, seconds, direction):
+    """Helper function converting Degrees/Minutes/Seconds to Decimal Degrees
+    
+    Degrees, minutes, and seconds are numeric types.
+    Direction is a single character: 'N', 'E', 'S', or 'W'.
+    The type returned shall be a floating point number.
+    """
+    if direction == 'N' or direction == 'E':
+        return degrees + (minutes / 60.) + (seconds / 3600.)
+    else:
+        return -1 * (degrees + (minutes / 60.) + (seconds / 3600.))
