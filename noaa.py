@@ -12,7 +12,11 @@ import modules.reactionscroll as rs
 from geopy import geocoders
 
 STATION_LIST_URL = "https://tidesandcurrents.noaa.gov/stations.html?type=All%20Stations&sort=0"
+STATION_INFO_URL_FORMAT = "https://tidesandcurrents.noaa.gov/stationhome.html?id={}"
+
 STATION_LISTING_PATTERN = '\\<a\\ style\\=\\"color\\:\\ \\#015FA9\\;\\"\\ href\\=\\"inventory\\.html\\?id\\=([\\d]+)\\"\\>[\\d]+\\ ([^\\<]+)\\<\\/a\\>'
+LATITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (N|S)'
+LONGITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (E|W)'
 
 class Station(object):
     def __init__(self, latitude, longitude, name, id_):
@@ -32,8 +36,22 @@ class StationGlobe(object):
         noaa = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
-            geo = geolocator.geocode(match[1])
-            stations.append(Station(geo.latitude, geo.longitude, match[1], match[0]))
+            stat_id = match[1]
+            stat_name = match[2]
+            
+            station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
+            
+            # Get station latitude
+            latitude_match = re.search(LATITUDE_PATTERN, station_info.text)
+            latitude = (-1 if latitude_match.group(3) == 'W' else 1) \
+                     * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+            
+            # Get station longitude
+            longitude_match = re.search(LONGITUDE_PATTERN, station_info.text)
+            longitude = (-1 if latitude_match.group(3) == 'S' else 1) \
+                     * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+            
+            stations.append(Station(latitude, longitude, stat_name, stat_id))
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
