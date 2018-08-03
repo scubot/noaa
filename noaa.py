@@ -12,7 +12,11 @@ import modules.reactionscroll as rs
 from geopy import geocoders
 
 STATION_LIST_URL = "https://tidesandcurrents.noaa.gov/stations.html?type=All%20Stations&sort=0"
+STATION_INFO_URL_FORMAT = "https://tidesandcurrents.noaa.gov/stationhome.html?id={}"
+
 STATION_LISTING_PATTERN = '\\<a\\ style\\=\\"color\\:\\ \\#015FA9\\;\\"\\ href\\=\\"inventory\\.html\\?id\\=([\\d]+)\\"\\>[\\d]+\\ ([^\\<]+)\\<\\/a\\>'
+LATITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (N|S)'
+LONGITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (E|W)'
 
 class Station(object):
     def __init__(self, latitude, longitude, name, id_):
@@ -29,20 +33,32 @@ class StationGlobe(object):
         self.geolocator = geolocator  # geopy geolocator
         
     @staticmethod
-    def scrape_noaa(geolocator):
-        db_query = Query()
-        noaa = requests.get(STATION_LIST_URL)
+    def scrape_noaa(geolocator, db_query):
+        station_page = requests.get(STATION_LIST_URL)
         stations = []
-        for match in re.finditer(STATION_LISTING_PATTERN, noaa.text):
+        for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
             search = NOAA.module_db.search(db_query.station.id_ == match[0])
             if search is None:
-                geo = geolocator.geocode(match[1])
-                station_object = Station(geo.latitude, geo.longitude, match[1], match[0])
+                stat_id = match[1]
+                stat_name = match[2]
+                
+                station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
+                
+                # Get station latitude
+                latitude_match = re.search(LATITUDE_PATTERN, station_info.text)
+                latitude = (-1 if latitude_match.group(3) == 'W' else 1) \
+                         * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+                
+                # Get station longitude
+                longitude_match = re.search(LONGITUDE_PATTERN, station_info.text)
+                longitude = (-1 if latitude_match.group(3) == 'S' else 1) \
+                          * (float(latitude_match.group(1)) + (float(latitude_match.group(2))/60.))
+                
+                station_object = Station(latitude, longitude, stat_name, stat_id)
                 stations.append(station_object)
                 NOAA.module_db.insert({'station': station_object})
             else:
                 stations.append(search)
-
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
@@ -131,7 +147,7 @@ class NOAA(BotModule):
 
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
     
-    station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'))
+    station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'), Query())
 
     async def contains_returns(self, message):
         for x in self.message_returns:
