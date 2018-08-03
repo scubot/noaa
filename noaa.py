@@ -160,7 +160,13 @@ class NOAA(BotModule):
 
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
     
-    station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'), Query())
+    station_globe = 
+    
+    def __init__(self):
+        super().__init__()
+        self.station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'),
+                                                      self.module_db,
+                                                      Query())
 
     async def contains_returns(self, message):
         for x in self.message_returns:
