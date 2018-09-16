@@ -2,12 +2,12 @@ import re
 import html
 import datetime
 import asyncio
+import shlex
 
 import requests
 import discord
 from tinydb import TinyDB, Query
 from geopy import geocoders
-import shlex
 
 from modules.botModule import *
 import modules.reactionscroll as rs
@@ -47,14 +47,14 @@ class StationGlobe(object):
         
     @staticmethod
     def scrape_noaa(geolocator, database, db_query):
+        print("Fetching list of stations")
         station_page = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
             stat_id = match[1]
             stat_name = html.unescape(match[2])
-
-            search = database.search(db_query.station.id_ == stat_id)
-            if not search:
+            search = database.get(db_query.station.id_ == stat_id)
+            if search is None:
                 station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
                 
                 # Get station latitude
@@ -75,7 +75,7 @@ class StationGlobe(object):
                 stations.append(station_object)
                 database.insert({'station': station_object.to_dict()})
             else:
-                stations.append(Station.from_dict(search[0]['station']))
+                stations.append(Station.from_dict(search['station']))
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
@@ -156,7 +156,7 @@ class NOAA(BotModule):
 
     trigger_string = 'noaa'
 
-    module_version = '0.2.0'
+    module_version = '0.3.0'
 
     listen_for_reaction = True
 
@@ -166,6 +166,7 @@ class NOAA(BotModule):
     
     def __init__(self):
         super().__init__()
+        print("Initializing NOAA bot module")
         self.station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'),
                                                       self.module_db,
                                                       Query())
@@ -208,15 +209,16 @@ class NOAA(BotModule):
                 station_id = 0
                 coords_match = re.match('^(-?[\d]+\.[\d]+)(,? |, ?)(-?[\d]+\.[\d]+)$', msg[2])
                 if re.match('^[\d]+$', msg[2]):
-                    station_id = msg[2]
+                    station = Station.from_dict(
+                        self.module_db.get(target.station.id_ == msg[2])['station'])
                 elif coords_match:
-                    station_id = self.station_globe.closest_station_coords(float(coords_match.group(1)),
-                                                                           float(coords_match.group(3))).id_
+                    station = self.station_globe.closest_station_coords(float(coords_match.group(1)),
+                                                                           float(coords_match.group(3)))
                 else:
-                    station_id = self.station_globe.closest_station_name(msg[2]).id_
+                    station = self.station_globe.closest_station_name(msg[2])
                 
                 m_ret = await client.send_message(message.channel, embed=await self.fetching_placeholder())
-                self.scroll.title = "Tidal information for station #" + station_id
+                self.scroll.title = "Tidal information for station '{}'".format(station.name)
                 days_advance = datetime.timedelta(days=self.days_advance)
                 today = datetime.date.today()
                 end_date = today + days_advance
@@ -224,7 +226,7 @@ class NOAA(BotModule):
                 end_date = end_date.isoformat().replace('-', '')
                 url = "https://tidesandcurrents.noaa.gov/api/datagetter?product=predictions" \
                       "&application=NOS.COOPS.TAC.WL&begin_date=" + today + "&end_date=" + end_date + "&datum=MLLW" \
-                      "&station=" + station_id + "&time_zone=lst_ldt&units=english&interval=hilo&format=json"
+                      "&station=" + station.id_ + "&time_zone=lst_ldt&units=english&interval=hilo&format=json"
                 html = requests.get(url)
                 if await self.api_error(html):
                     await client.edit_message(m_ret, embed=discord.Embed(title='That station does not exist or'
