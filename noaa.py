@@ -47,7 +47,7 @@ class StationGlobe(object):
         
     @staticmethod
     def scrape_noaa(geolocator, database, db_query):
-        print("Fetching list of stations")
+        print("[NOAA] Fetching list of stations")
         station_page = requests.get(STATION_LIST_URL)
         stations = []
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
