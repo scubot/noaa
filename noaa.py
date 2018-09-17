@@ -19,6 +19,7 @@ STATION_LISTING_PATTERN = '\\<a\\ style\\=\\"color\\:\\ \\#015FA9\\;\\"\\ href\\
 LATITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (N|S)'
 LONGITUDE_PATTERN = '(\\d+)&deg; (\\d+\\.?\\d*)\' (E|W)'
 
+
 class Station(object):
     def __init__(self, latitude, longitude, name, id_):
         self.latitude = latitude  # Latitude in decimal form
@@ -129,13 +130,15 @@ class NOAAScrollable(rs.Scrollable):
                 embed.add_field(name=self.tide_name(self.processed_data[y]),
                                 value=self.tide_value(self.processed_data[y]))
 
-    def tide_name(self, entry):
+    @staticmethod
+    def tide_name(entry):
         if entry['type'] == 'L':
             return "Low tide at " + entry['t'].strftime("%H:%M")
         elif entry['type'] == 'H':
             return "High tide at " + entry['t'].strftime("%H:%M")
 
-    def tide_value(self, entry):
+    @staticmethod
+    def tide_value(entry):
         return "Depth: " + str(entry['v']) + "ft"
 
     def tide_newday(self, index):  # This is a safer way to check in case the index overflows
@@ -190,11 +193,13 @@ class NOAA(BotModule):
                 if ty == 'prev':
                     x[1] -= 1
 
-    async def fetching_placeholder(self):
+    @staticmethod
+    async def fetching_placeholder():
         embed = discord.Embed(title='🔄 Now fetching data...')
         return embed
 
-    async def api_error(self, obj):
+    @staticmethod
+    async def api_error(obj):
         try:
             x = obj.json()['error']
             return True
@@ -258,6 +263,7 @@ class NOAA(BotModule):
             embed = self.scroll.previous(current_pos=pos)
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
+
 
 def _dms_to_dd(degrees, minutes, seconds, direction):
     """Helper function converting Degrees/Minutes/Seconds to Decimal Degrees
