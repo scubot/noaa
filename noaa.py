@@ -167,7 +167,6 @@ class NOAA(BotModule):
     
     def __init__(self):
         super().__init__()
-        print("Initializing NOAA bot module")
         self.station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'),
                                                       self.module_db,
                                                       Query())
