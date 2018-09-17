@@ -54,7 +54,7 @@ class StationGlobe(object):
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
             stat_id = match[1]
             stat_name = html.unescape(match[2])
-            search = list(filter(lambda station: station['station'] == stat_id, all_db))
+            search = list(filter(lambda station: station['station']['id_'] == stat_id, all_db))
             if not search:
                 station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
                 
