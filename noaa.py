@@ -51,11 +51,12 @@ class StationGlobe(object):
         print("[NOAA] Fetching list of stations")
         station_page = requests.get(STATION_LIST_URL)
         stations = []
+        all_db = database.all()
         for match in re.finditer(STATION_LISTING_PATTERN, station_page.text):
             stat_id = match[1]
             stat_name = html.unescape(match[2])
-            search = database.get(db_query.station.id_ == stat_id)
-            if search is None:
+            search = list(filter(lambda station: station['station']['id_'] == stat_id, all_db))
+            if not search:
                 station_info = requests.get(STATION_INFO_URL_FORMAT.format(stat_id))
                 
                 # Get station latitude
@@ -76,7 +77,7 @@ class StationGlobe(object):
                 stations.append(station_object)
                 database.insert({'station': station_object.to_dict()})
             else:
-                stations.append(Station.from_dict(search['station']))
+                stations.append(Station.from_dict(search[0]['station']))
         return StationGlobe(stations, geolocator)
     
     def closest_station_coords(self, latitude, longitude):
@@ -169,7 +170,6 @@ class NOAA(BotModule):
     
     def __init__(self):
         super().__init__()
-        print("Initializing NOAA bot module")
         self.station_globe = StationGlobe.scrape_noaa(geocoders.Nominatim(user_agent='scubot'),
                                                       self.module_db,
                                                       Query())
