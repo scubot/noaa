@@ -63,9 +63,9 @@ class Noaa(commands.Cog):
     name = 'noaa'
     description = 'Provides data from NOAA stations'
     days_advance = 7
-    help_text = '`!noaa tide [station_id]` for information about tides (up to' + str(days_advance) + ' days in advance.'
+    help_text = '`!noaa tide [station_id]` for information about tides up to' + str(days_advance) + ' days in advance.'
     trigger_string = 'noaa'
-    module_version = '0.1.0'
+    module_version = '1.0.0.dev'
     listen_for_reaction = True
     message_returns = []
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
@@ -77,7 +77,6 @@ class Noaa(commands.Cog):
     @commands.command()
     async def tides(self, ctx: commands.context, station):
         station = int(station)
-
         m_ret = await ctx.send(embed=await self.fetching_placeholder())
         self.scroll.title = "Tidal information for station #" + str(station)
         try:
@@ -126,6 +125,7 @@ class Noaa(commands.Cog):
         embed = discord.Embed(title='🔄 Now fetching data...')
         return embed
 
+    @commands.Cog.listener()
     async def on_reaction_add(self, reaction, client, user):
         if not await self.contains_returns(reaction.message):
             return 0
