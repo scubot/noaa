@@ -1,11 +1,16 @@
-import discord
-import shlex
-from tinydb import TinyDB, Query
+from typing import List
+
 import datetime
+
+import discord
+from discord.ext import commands
+
 import reactionscroll as rs
+from noaa import tides
+
 
 class NOAAScrollable(rs.Scrollable):
-    def preprocess(self, data):  # Ok this actually does nothing
+    def preprocess(self, data: tides.PredictionsResult):
         return data
 
     def refresh(self, data):
@@ -15,63 +20,88 @@ class NOAAScrollable(rs.Scrollable):
         self.create_embeds()
 
     def create_embeds(self):
-        page_counter = 1
-        for y in range(0, len(self.processed_data)):  # Not using an iterable because of the code logic used below
-            if y == 0:
-                embed = discord.Embed(title=self.title, color=self.color, description='Date: ' +
-                                      self.processed_data[y]['t'].strftime("%Y-%m-%d"))
-                embed.set_footer(text="Page " + str(page_counter) + " of " + str(NOAA.days_advance) + " | Data "
-                                      "provided by the NOAA")
-                embed.add_field(name=self.tide_name(self.processed_data[y]),
-                                value=self.tide_value(self.processed_data[y]))
-            elif self.tide_newday(y):
-                page_counter += 1
-                embed.add_field(name=self.tide_name(self.processed_data[y]),
-                                value=self.tide_value(self.processed_data[y]))
-                self.embeds.append(embed)
-                del embed
-                embed = discord.Embed(title=self.title, color=self.color, description='Date: ' +
-                                      self.processed_data[y]['t'].strftime("%Y-%m-%d"))
-                embed.set_footer(text="Page " + str(page_counter) + " of " + str(NOAA.days_advance) + " | Data "
-                                      "provided by the NOAA")
-            else:
-                embed.add_field(name=self.tide_name(self.processed_data[y]),
-                                value=self.tide_value(self.processed_data[y]))
+        data = self.split_data(self.processed_data)
+        for day, items in enumerate(data):
+            embed = discord.Embed(
+                title=self.title,
+                color=self.color,
+                description='Date: {}'.format(
+                    items[0].time.strftime('%Y-%m-%d')))
+            embed.set_footer(
+                text='Page {} of {} | Data provided by NOAA'.format(
+                    day + 1, Noaa.days_advance))
 
-    def tide_name(self, entry):
-        if entry['type'] == 'L':
-            return "Low tide at " + entry['t'].strftime("%H:%M")
-        elif entry['type'] == 'H':
-            return "High tide at " + entry['t'].strftime("%H:%M")
+            for item in items:
+                embed.add_field(name=self.tide_name(item),
+                                value=self.tide_value(item))
 
-    def tide_value(self, entry):
-        return "Depth: " + str(entry['v']) + "ft"
+            self.embeds.append(embed)
 
-    def tide_newday(self, index):  # This is a safer way to check in case the index overflows
-        if self.processed_data[index-1]['t'].day != self.processed_data[index]['t'].day:
-            return True
-        else:
-            return False
+    def tide_name(self, entry: tides.PredictionsRow):
+        if entry.type == 'L':
+            return "Low tide at " + entry.time.strftime("%H:%M")
+        elif entry.type == 'H':
+            return "High tide at " + entry.time.strftime("%H:%M")
+
+    def tide_value(self, entry: tides.PredictionsRow):
+        return "Depth: " + str(entry.value) + "ft"
+
+    @staticmethod
+    def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsRow]]:
+        res = [[]]
+
+        for this, that in zip(data, data[1:]):
+            res[-1].append(this)
+            if this.time.day != that.time.day:
+                res.append([])
+        res[-1].append(data[-1])
+        return res
 
 
-class NOAA:
+
+class Noaa(commands.Cog):
     name = 'noaa'
-
     description = 'Provides data from NOAA stations'
-
     days_advance = 7
-
     help_text = '`!noaa tide [station_id]` for information about tides (up to' + str(days_advance) + ' days in advance.'
-
     trigger_string = 'noaa'
-
     module_version = '0.1.0'
-
     listen_for_reaction = True
-
     message_returns = []
-
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
+
+    def __init__(self, bot):
+        self.version = '1.0.0.dev'
+        self.bot = bot
+
+    @commands.command()
+    async def tides(self, ctx: commands.context, station):
+        station = int(station)
+
+        m_ret = await ctx.send(embed=await self.fetching_placeholder())
+        self.scroll.title = "Tidal information for station #" + str(station)
+        try:
+            data = tides.NoaaRequest() \
+                .station(station) \
+                .product(tides.Product.PREDICTIONS) \
+                .datum(tides.Datum.MEAN_LOWER_LOW_WATER) \
+                .timezone(tides.TimeZone.LOCAL_DST) \
+                .begin_date(datetime.datetime.today()) \
+                .range(24 * self.days_advance) \
+                .interval(tides.Interval.HILO) \
+                .units(tides.Unit.ENGLISH) \
+                .execute()
+        except tides.ApiError as error:
+            await ctx.edit_message(
+                m_ret,
+                embed=discord.Embed(title=str(error)))
+            return 0
+
+        self.scroll.refresh(data)
+        await ctx.edit_message(m_ret, embed=self.scroll.initial_embed())
+        self.message_returns.append([m_ret, 0])
+        await ctx.add_reaction(m_ret, "⏪")
+        await ctx.add_reaction(m_ret, "⏩")
 
     async def contains_returns(self, message):
         for x in self.message_returns:
@@ -95,44 +125,6 @@ class NOAA:
     async def fetching_placeholder(self):
         embed = discord.Embed(title='🔄 Now fetching data...')
         return embed
-
-    async def api_error(self, obj):
-        try:
-            x = obj.json()['error']
-            return True
-        except KeyError:
-            return False
-
-    async def parse_command(self, message, client):
-        msg = shlex.split(message.content)
-        target = Query()
-        if len(msg) > 1:
-            if msg[1] == 'tide':
-                m_ret = await client.send_message(message.channel, embed=await self.fetching_placeholder())
-                self.scroll.title = "Tidal information for station #" + msg[2]
-                days_advance = datetime.timedelta(days=self.days_advance)
-                today = datetime.date.today()
-                end_date = today + days_advance
-                today = today.isoformat().replace('-', '')
-                end_date = end_date.isoformat().replace('-', '')
-                url = "https://tidesandcurrents.noaa.gov/api/datagetter?product=predictions" \
-                      "&application=NOS.COOPS.TAC.WL&begin_date=" + today + "&end_date=" + end_date + "&datum=MLLW" \
-                      "&station=" + msg[2] + "&time_zone=lst_ldt&units=english&interval=hilo&format=json"
-                html = requests.get(url)
-                if await self.api_error(html):
-                    await client.edit_message(m_ret, embed=discord.Embed(title='That station does not exist or'
-                                                                               ' does not provide tidal data.'))
-                    return 0
-                data = html.json()['predictions']
-                for entry in data:  # Converting string into datetime objects
-                    entry['t'] = datetime.datetime.strptime(entry['t'], "%Y-%m-%d %H:%M")
-                self.scroll.refresh(data)
-                await client.edit_message(m_ret, embed=self.scroll.initial_embed())
-                self.message_returns.append([m_ret, 0])
-                await client.add_reaction(m_ret, "⏪")
-                await client.add_reaction(m_ret, "⏩")
-            else:
-                return 0
 
     async def on_reaction_add(self, reaction, client, user):
         if not await self.contains_returns(reaction.message):
