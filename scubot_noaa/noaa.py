@@ -1,11 +1,8 @@
 import discord
-from modules.botModule import *
 import shlex
 from tinydb import TinyDB, Query
 import datetime
-import asyncio
-import requests
-import modules.reactionscroll as rs
+import reactionscroll as rs
 
 class NOAAScrollable(rs.Scrollable):
     def preprocess(self, data):  # Ok this actually does nothing
@@ -57,7 +54,7 @@ class NOAAScrollable(rs.Scrollable):
             return False
 
 
-class NOAA(BotModule):
+class NOAA:
     name = 'noaa'
 
     description = 'Provides data from NOAA stations'

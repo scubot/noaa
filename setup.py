@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="scubot-tides",
+    name="scubot-noaa",
     version="1.0.0.dev",
     author="Scubot Team",
     description="Tide Chart for Scubot",
@@ -17,7 +17,9 @@ setuptools.setup(
         "discord"
     ],
     dependency_links=[
-        "https://github.com/scubot/reaction-scroll/tarball/package#egg=reaction-scroll-0.0.1.dev"
+        "https://github.com/scubot/reaction-scroll/tarball/package#egg"
+        "=reaction-scroll-0.0.1.dev",
+
         "https://github.com/hxtk/noaa_py/tarball/master#egg=noaa_py-0.0.1.dev"
     ],
     classifiers=[
@@ -26,5 +28,3 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
 )
-
-
