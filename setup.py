@@ -14,7 +14,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         "tinydb",
-        "discord"
+        "discord",
         "reaction-scroll",
         "noaa_py"
     ],
