@@ -75,8 +75,7 @@ class Noaa(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def tides(self, ctx: commands.context, station):
-        station = int(station)
+    async def tides(self, ctx: commands.context, station: int):
         m_ret = await ctx.send(embed=await self.fetching_placeholder())
         self.scroll.title = "Tidal information for station #" + str(station)
         try:
@@ -124,7 +123,7 @@ class Noaa(commands.Cog):
         return embed
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, client, user):
+    async def on_reaction_add(self, reaction, user):
         if not await self.contains_returns(reaction.message):
             return 0
         pos = await self.find_pos(reaction.message)
@@ -133,11 +132,11 @@ class Noaa(commands.Cog):
             react_text = reaction.emoji.name
         if react_text == "⏩":
             embed = self.scroll.next(current_pos=pos)
-            await client.edit_message(reaction.message, embed=embed)
+            await reaction.message.edit(embed=embed)
             await self.update_pos(reaction.message, 'next')
         if react_text == "⏪":
             embed = self.scroll.previous(current_pos=pos)
-            await client.edit_message(reaction.message, embed=embed)
+            await reaction.message.edit(embed=embed)
             await self.update_pos(reaction.message, 'prev')
 
 def setup(bot):
