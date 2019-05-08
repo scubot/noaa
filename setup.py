@@ -15,6 +15,8 @@ setuptools.setup(
     install_requires=[
         "tinydb",
         "discord"
+        "reaction-scroll==0.0.1.dev",
+        "noaa_py==0.0.1.dev"
     ],
     dependency_links=[
         "https://github.com/scubot/reaction-scroll/tarball/package#egg"
