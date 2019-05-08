@@ -71,7 +71,7 @@ class Noaa(commands.Cog):
     scroll = NOAAScrollable(limit=0, title='', color=0x1C6BA0, inline=False, table='')
 
     def __init__(self, bot):
-        self.version = '1.0.0.dev'
+        self.version = '1.0.0.dev0'
         self.bot = bot
 
     @commands.command()
@@ -91,16 +91,14 @@ class Noaa(commands.Cog):
                 .units(tides.Unit.ENGLISH) \
                 .execute()
         except tides.ApiError as error:
-            await ctx.edit_message(
-                m_ret,
-                embed=discord.Embed(title=str(error)))
+            await m_ret.edit(embed=discord.Embed(title=str(error)))
             return 0
 
         self.scroll.refresh(data)
-        await ctx.edit_message(m_ret, embed=self.scroll.initial_embed())
+        await m_ret.edit(embed=self.scroll.initial_embed())
         self.message_returns.append([m_ret, 0])
-        await ctx.add_reaction(m_ret, "⏪")
-        await ctx.add_reaction(m_ret, "⏩")
+        await m_ret.add_reaction("⏪")
+        await m_ret.add_reaction("⏩")
 
     async def contains_returns(self, message):
         for x in self.message_returns:
