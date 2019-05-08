@@ -15,14 +15,12 @@ setuptools.setup(
     install_requires=[
         "tinydb",
         "discord",
-        "reaction-scroll==0.0.1.dev0",
-        "noaa_py==0.0.1.dev0"
-    ],
-    dependency_links=[
-        "https://github.com/scubot/reaction-scroll/tarball/package#egg"
-        "=reaction-scroll-0.0.1.dev0",
 
-        "https://github.com/hxtk/noaa_py/tarball/master#egg=noaa_py-0.0.1.dev0"
+        "reaction-scroll @ git+https://github.com/scubot/reaction-scroll.git"
+        "@e99ad003bc9a96f6f287f9ec09c551abbb4ccefd",
+
+        "noaa_py @ git+https://github.com/hxtk/noaa_py.git"
+        "@54b3eb3471e72aad54d83d147feb1ff89442d43c"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
