@@ -29,7 +29,7 @@ class NOAAScrollable(rs.Scrollable):
                     items[0].time.strftime('%Y-%m-%d')))
             embed.set_footer(
                 text='Page {} of {} | Data provided by NOAA'.format(
-                    day + 1, Noaa.days_advance))
+                    day + 1, len(data)))
 
             for item in items:
                 embed.add_field(name=self.tide_name(item),
