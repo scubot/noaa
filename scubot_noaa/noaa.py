@@ -14,7 +14,6 @@ class NOAAScrollable(rs.Scrollable):
         return data
 
     def refresh(self, data):
-        self.processed_data.clear()
         self.embeds.clear()
         self.processed_data = data
         self.create_embeds()
