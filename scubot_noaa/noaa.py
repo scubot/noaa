@@ -141,3 +141,6 @@ class Noaa(commands.Cog):
             embed = self.scroll.previous(current_pos=pos)
             await client.edit_message(reaction.message, embed=embed)
             await self.update_pos(reaction.message, 'prev')
+
+def setup(bot):
+    bot.add_cog(Noaa(bot))
