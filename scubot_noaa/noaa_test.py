@@ -14,5 +14,5 @@ class TestNoaa:
         tide_1 = tides.PredictionsRow(today, 0.0, 'L'),
         tide_2 = tides.PredictionsRow(yesterday, 0.0, 'L')
         data = [tide_1, tide_2]
-        output = split_data(data)
+        output = noaa.split_data(data)
         assert output == [[tide_1], [tide_2]]
