@@ -17,10 +17,10 @@ setuptools.setup(
         "discord",
 
         "reaction-scroll @ git+https://github.com/scubot/reaction-scroll.git"
-        "@25df3c55e91b646542908311abed6691939c81cb",
+        "@prototype",
 
         "noaa_py @ git+https://github.com/hxtk/noaa_py.git"
-        "@54b3eb3471e72aad54d83d147feb1ff89442d43c"
+        "@master"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
