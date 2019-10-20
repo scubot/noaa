@@ -23,7 +23,16 @@ def tide_value(entry: tides.PredictionsRow):
     return "Depth: " + str(entry.value) + "ft"
 
 def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsRow]]:
-    """Groups a list of tide predictions into rows of tide predictions."""
+    """Groups a list of tide predictions into rows of tide predictions.
+
+    Args:
+        data: A list of tides.PredictionsRow tuples sorted in ascending order by date.
+
+    Returns:
+        A list of lists of tides.PredictionsRow tuples such that there is one inner list
+        for each day found in the input data and the tides.PredictionRow elements within
+        are exactly those occuring on the corresponding day.
+    """
     res = [[]]
     for this, that in zip(data, data[1:]):
         res[-1].append(this)
