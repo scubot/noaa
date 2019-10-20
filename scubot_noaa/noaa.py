@@ -25,12 +25,11 @@ def tide_value(entry: tides.PredictionsRow):
 def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsRow]]:
     """Groups a list of tide predictions into rows of tide predictions."""
     res = [[]]
-
     for this, that in zip(data, data[1:]):
         res[-1].append(this)
         if this.time.day != that.time.day:
             res.append([])
-        res[-1].append(data[-1])
+    res[-1].append(data[-1])
     return res
 
 
