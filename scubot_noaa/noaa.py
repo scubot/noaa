@@ -1,5 +1,5 @@
 """Scubot module for fetching tide charts from NOAA."""
-from typing import List, Mapping
+from typing import List, Mapping, Any
 
 import datetime
 
@@ -42,7 +42,7 @@ def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsR
     return res
 
 
-def make_map(tides: List[tides.PredictionsRow]) -> Mapping[Any, Any]:
+def make_map(data: List[tides.PredictionsRow]) -> Mapping[Any, Any]:
     """Converts a list of tide predictions into a map of tide names to tide values.
 
     Args:
@@ -51,7 +51,7 @@ def make_map(tides: List[tides.PredictionsRow]) -> Mapping[Any, Any]:
     Returns:
         dict of tide_name to tide_value for each tide in the list.
     """
-    res = dict(zip(map(tide_name, tides), map(tide_value, tides)))
+    return dict(zip(map(tide_name, data), map(tide_value, data)))
 
 
 class Noaa(commands.Cog):
