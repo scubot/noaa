@@ -1,5 +1,5 @@
 """Scubot module for fetching tide charts from NOAA."""
-from typing import List
+from typing import List, Mapping
 
 import datetime
 
@@ -40,6 +40,18 @@ def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsR
             res.append([])
     res[-1].append(data[-1])
     return res
+
+
+def make_map(tides: List[tides.PredictionsRow]) -> Mapping[Any, Any]:
+    """Converts a list of tide predictions into a map of tide names to tide values.
+
+    Args:
+        tides: List of tide predictions data
+
+    Returns:
+        dict of tide_name to tide_value for each tide in the list.
+    """
+    res = dict(zip(map(tide_name, tides), map(tide_value, tides)))
 
 
 class Noaa(commands.Cog):
@@ -95,7 +107,7 @@ class Noaa(commands.Cog):
         title = "Tidal information for station #" + str(station)
         await self.scroll_builder.create_on_message(
             m_ret,
-            split_data(data),
+            map(make_map, split_data(data)),
             title=title,
             key_str=tide_name,
             value_str=tide_value)
