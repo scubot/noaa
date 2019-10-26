@@ -108,9 +108,7 @@ class Noaa(commands.Cog):
         await self.scroll_builder.create_on_message(
             m_ret,
             map(make_map, split_data(data)),
-            title=title,
-            key_str=tide_name,
-            value_str=tide_value)
+            title=title)
 
 
 def setup(bot: commands.Bot):
