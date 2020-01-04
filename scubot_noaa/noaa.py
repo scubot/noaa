@@ -33,7 +33,7 @@ def split_data(data: List[tides.PredictionsRow]) -> List[List[tides.PredictionsR
         for each day found in the input data and the tides.PredictionRow elements within
         are exactly those occuring on the corresponding day.
     """
-    res = [[]]
+    res: List[List[tides.PredictionsRow]] = [[]]
     for this, that in zip(data, data[1:]):
         res[-1].append(this)
         if this.time.day != that.time.day:
@@ -68,7 +68,6 @@ class Noaa(commands.Cog):
     trigger_string = 'noaa'
     module_version = '1.0.0.dev'
     listen_for_reaction = True
-    message_returns = []
 
     def __init__(self, bot: commands.Bot, scroll_builder: rs.ScrollViewBuilder):
         self.version = '1.0.0.dev0'
@@ -76,7 +75,7 @@ class Noaa(commands.Cog):
         self.scroll_builder = scroll_builder
 
     @commands.command()
-    async def tides(self, ctx: commands.context, station: int):
+    async def tides(self, ctx: commands.Context, station: int):
         """Command endpoint for tidechart module.
 
         This signature implements a commands.command.
